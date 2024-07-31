@@ -3,40 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Practice Test 1</title>
+    <title>Practice Test 6</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
-            display: flex;
-            height: 100vh;
             background: url('SAT.jpg') no-repeat center center fixed;
             background-size: cover;
             color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         #pdf-container {
-            width: 66%;
-            height: 100%;
+            flex: 1;
             overflow: auto;
             background: rgba(255, 255, 255, 0.9);
             padding: 20px;
         }
         #answer-sheet {
-            width: 34%;
-            height: 100%;
+            flex: 1;
             overflow: auto;
             background: rgba(0, 0, 0, 0.7);
             padding: 20px;
-            display: flex;
-            flex-direction: column;
+            color: white;
         }
         .module {
             margin-bottom: 20px;
-            cursor: pointer;
         }
         .module h2 {
-            margin-top: 0;
+            cursor: pointer;
+            margin: 0;
         }
         .module-content {
             display: none;
@@ -95,7 +93,6 @@
     </div>
 
     <script>
-        // Correct answers for each module
         const correctAnswers = {
             module1: ["D", "B", "B", "D", "D", "A", "B", "B", "D", "D", "A", "A", "A", "C", "B", "D", "D", "B", "A", "C", "D", "D", "D", "C", "B", "D", "D", "C", "C", "B", "A", "B", "C"],
             module2: ["C", "D", "C", "B", "B", "C", "D", "C", "C", "C", "C", "C", "C", "D", "D", "B", "A", "D", "C", "A", "A", "C", "B", "A", "D", "B", "D", "A", "B", "C", "D", "B", "C"],
@@ -103,7 +100,6 @@
             module4: ["B", "A", "B", "A", "B", "6", "10", "B", "A", "A", "D", "C", "774", "5", "B", "A", "D", "B", "A", ".2917", "1677", "B", "A", "D", "A", "A", "-28"]
         };
 
-        // Conversion tables from raw score to scaled score
         const rawToScaledReadingWriting = [
             [0, 200, 200], [1, 200, 200], [2, 200, 200], [3, 200, 200], [4, 200, 200], [5, 200, 210], [6, 200, 230], 
             [7, 200, 250], [8, 210, 270], [9, 220, 280], [10, 230, 290], [11, 240, 300], [12, 260, 320], [13, 270, 330], 
@@ -128,17 +124,11 @@
             [49, 740, 770], [50, 750, 780], [51, 760, 790], [52, 770, 800], [53, 780, 800], [54, 790, 800]
         ];
 
-        // Toggle module visibility
         function toggleModule(moduleId) {
             const module = document.getElementById(moduleId);
-            if (module.style.display === 'none' || module.style.display === '') {
-                module.style.display = 'block';
-            } else {
-                module.style.display = 'none';
-            }
+            module.style.display = (module.style.display === 'none' || module.style.display === '') ? 'block' : 'none';
         }
 
-        // Answer sheet generation
         const createAnswerSheet = (module, moduleId, numQuestions, isMath = false) => {
             for (let i = 1; i <= numQuestions; i++) {
                 const questionDiv = document.createElement('div');
@@ -161,12 +151,10 @@
             }
         };
 
-        // Stop event propagation
         function stopPropagation(event) {
             event.stopPropagation();
         }
 
-        // Create answer sheets for modules
         document.addEventListener("DOMContentLoaded", function() {
             createAnswerSheet(document.getElementById('module1'), 1, 33);
             createAnswerSheet(document.getElementById('module2'), 2, 33);
@@ -174,7 +162,6 @@
             createAnswerSheet(document.getElementById('module4'), 4, 27, true);
         });
 
-        // Convert raw score to scaled score
         function convertRawToScaled(rawScore, section) {
             const conversionTable = section === 'readingWriting' ? rawToScaledReadingWriting : rawToScaledMath;
             for (let i = 0; i < conversionTable.length; i++) {
@@ -182,14 +169,12 @@
                     return conversionTable[i];
                 }
             }
-            return [200, 200]; // Default value if not found
+            return [200, 200];
         }
 
-        // Answer submission
         function submitAnswers() {
             const answers = {};
             let totalCorrect = 0;
-            let totalQuestions = 0;
             let sectionScores = {readingWriting: 0, math: 0};
             let sectionRawScores = {readingWriting: 0, math: 0};
 
@@ -214,27 +199,22 @@
                             sectionRawScores.math++;
                         }
                     }
-                    totalQuestions++;
                 }
             }
 
-            // Convert raw scores to scaled scores
             const readingWritingScore = convertRawToScaled(sectionRawScores.readingWriting, 'readingWriting');
             const mathScore = convertRawToScaled(sectionRawScores.math, 'math');
 
             sectionScores.readingWriting = (readingWritingScore[1] + readingWritingScore[2]) / 2;
             sectionScores.math = (mathScore[1] + mathScore[2]) / 2;
 
-            // Calculate total score
             const totalScore = sectionScores.readingWriting + sectionScores.math;
 
-            // Display results
             let resultHtml = `<h3>Results</h3>
                               <p><strong>Reading and Writing:</strong> ${sectionScores.readingWriting} / 800</p>
                               <p><strong>Math:</strong> ${sectionScores.math} / 800</p>
                               <p><strong>Total Score:</strong> ${totalScore} / 1600</p>`;
 
-            // Detailed analysis
             resultHtml += `<h4>Detailed Analysis</h4>`;
             for (let moduleId of [1, 2, 3, 4]) {
                 resultHtml += `<h5>Module ${moduleId}</h5><ul>`;
