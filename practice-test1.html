@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Practice Test 1</title>
+    <link rel="icon" type="image/jpeg" href="logo.png">
     <style>
         body {
             margin: 0;
@@ -67,6 +68,12 @@
             padding: 10px;
             border-radius: 5px;
         }
+        #timer {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -74,6 +81,7 @@
         <embed src="sat-practice-test-1-digital.pdf" type="application/pdf" width="100%" height="100%">
     </div>
     <div id="answer-sheet">
+        <div id="timer"></div>
         <div class="module" onclick="toggleModule('module1')">
             <h2>Reading and Writing Module 1</h2>
             <div id="module1" class="module-content"></div>
@@ -90,11 +98,26 @@
             <h2>Math Module 2</h2>
             <div id="module4" class="module-content"></div>
         </div>
-        <button class="submit-button" onclick="submitAnswers()">Submit</button>
+        <button class="submit-button" onclick="manualSubmit()">Submit</button>
         <div id="result"></div>
     </div>
 
     <script>
+        // Retrieve current user from local storage
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) {
+            alert('Session expired. Please start from the login page.');
+            window.location.href = 'login.html';
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            createAnswerSheet(document.getElementById('module1'), 1, 33);
+            createAnswerSheet(document.getElementById('module2'), 2, 33);
+            createAnswerSheet(document.getElementById('module3'), 3, 27, true);
+            createAnswerSheet(document.getElementById('module4'), 4, 27, true);
+            startTimer();
+        });
+
         // Correct answers for each module
         const correctAnswers = {
             module1: ["B", "C", "D", "A", "B", "A", "A", "D", "C", "C", "A", "A", "A", "C", "D", "C", "B", "B", "A", "A", "C", "C", "B", "A", "B", "A", "A", "A", "D", "C", "D", "D", "C"],
@@ -114,6 +137,10 @@
             [42, 540, 560], [43, 550, 570], [44, 560, 580], [45, 570, 590], [46, 580, 600], [47, 590, 610], [48, 590, 610], 
             [49, 600, 620], [50, 610, 630], [51, 620, 640], [52, 630, 650], [53, 630, 650], [54, 640, 660]
         ];
+
+        let submitFlag = false; // Flag to prevent multiple submissions
+        let timerInterval;
+        let time = 2 * 60 * 60; // 2 hours in seconds
 
         // Toggle module visibility
         function toggleModule(moduleId) {
@@ -153,14 +180,6 @@
             event.stopPropagation();
         }
 
-        // Create answer sheets for modules
-        document.addEventListener("DOMContentLoaded", function() {
-            createAnswerSheet(document.getElementById('module1'), 1, 33);
-            createAnswerSheet(document.getElementById('module2'), 2, 33);
-            createAnswerSheet(document.getElementById('module3'), 3, 27, true);
-            createAnswerSheet(document.getElementById('module4'), 4, 27, true);
-        });
-
         // Convert raw score to scaled score
         function convertRawToScaled(rawScore) {
             for (let i = 0; i < rawToScaled.length; i++) {
@@ -172,7 +191,11 @@
         }
 
         // Answer submission
-        function submitAnswers() {
+        function submitAnswers(timeUp = false) {
+            if (submitFlag) return; // Prevent multiple submissions
+            submitFlag = true;
+            clearInterval(timerInterval); // Stop the timer
+
             const answers = {};
             let totalCorrect = 0;
             let totalQuestions = 0;
@@ -221,7 +244,7 @@
                               <p><strong>Total Score:</strong> ${totalScore} / 1600</p>`;
 
             // Detailed analysis
-            resultHtml += `<h4>Detailed Analysis</h4>`;
+            resultHtml += `<h4>Detailed Analysis for ${currentUser.fullName}</h4>`;
             for (let moduleId of [1, 2, 3, 4]) {
                 resultHtml += `<h5>Module ${moduleId}</h5><ul>`;
                 for (let i = 1; i <= (moduleId <= 2 ? 33 : 27); i++) {
@@ -233,8 +256,49 @@
                 resultHtml += `</ul>`;
             }
 
+            if (timeUp) {
+                resultHtml += `<p><strong>Note:</strong> Time's up! The test was submitted automatically.</p>`;
+            }
+
             document.getElementById("result").innerHTML = resultHtml;
+            document.querySelector(".submit-button").disabled = true;
         }
+
+        // Manual submission
+        function manualSubmit() {
+            clearInterval(timerInterval); // Stop the timer
+            submitAnswers(false); // Time up flag is false
+        }
+
+        // Timer function
+        function startTimer() {
+            timerInterval = setInterval(function() {
+                const hours = Math.floor(time / 3600);
+                const minutes = Math.floor((time % 3600) / 60);
+                const seconds = time % 60;
+                document.getElementById('timer').innerText = `Time Remaining: ${hours}:${minutes}:${seconds}`;
+                if (time <= 0) {
+                    clearInterval(timerInterval);
+                    submitAnswers(true); // Time up flag is true
+                } else {
+                    time--;
+                }
+            }, 1000);
+        }
+
+        // Handle page reload
+        window.addEventListener('beforeunload', function (e) {
+            localStorage.removeItem('currentUser');
+        });
+
+        // Create answer sheets for modules
+        document.addEventListener("DOMContentLoaded", function() {
+            createAnswerSheet(document.getElementById('module1'), 1, 33);
+            createAnswerSheet(document.getElementById('module2'), 2, 33);
+            createAnswerSheet(document.getElementById('module3'), 3, 27, true);
+            createAnswerSheet(document.getElementById('module4'), 4, 27, true);
+            startTimer();
+        });
     </script>
 </body>
 </html>
