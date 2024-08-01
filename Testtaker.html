@@ -59,20 +59,36 @@
     <div id="info-form">
         <h2>Please enter your details to start the test</h2>
         <input type="text" id="full-name" placeholder="Full Name" required>
-        <input type="email" id="email" placeholder="Email" required>
+        <input type="text" id="unique-code" placeholder="Enter Unique Code" required>
         <button onclick="storeUserInfo()">Start Test</button>
     </div>
 
     <script>
+        const validCodes = ['X45683', 'CODE456', 'CODE789']; // Example unique codes
+
         function storeUserInfo() {
             const fullName = document.getElementById('full-name').value;
-            const email = document.getElementById('email').value;
-            if (fullName && email) {
-                localStorage.setItem('fullName', fullName);
-                localStorage.setItem('email', email);
-                window.location.href = 'starttest.html';
+            const uniqueCode = document.getElementById('unique-code').value;
+
+            if (!validCodes.includes(uniqueCode)) {
+                alert('Invalid unique code.');
+                return;
+            }
+
+            if (fullName && uniqueCode) {
+                let users = JSON.parse(localStorage.getItem('users')) || [];
+                let user = users.find(user => user.fullName === fullName && user.uniqueCode === uniqueCode);
+
+                if (!user) {
+                    user = { fullName, uniqueCode, scores: {} };
+                    users.push(user);
+                }
+
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.setItem('currentUser', JSON.stringify({ fullName, uniqueCode }));
+                window.location.href = 'practice-test1.html';
             } else {
-                alert('Please enter both your name and email.');
+                alert('Please enter all details.');
             }
         }
     </script>
