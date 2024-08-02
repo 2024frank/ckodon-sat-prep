@@ -92,6 +92,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Include swipe library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <!-- Include timer.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/easytimer.js/dist/easytimer.min.js"></script>
 </head>
 <body>
     <div id="pdf-container">
@@ -131,12 +133,17 @@
             window.location.href = 'Testtaker.html';
         }
 
+        // Timer initialization
+        const totalTestTime = 2 * 60 * 60; // 2 hours in seconds
+        const savedTime = localStorage.getItem('remainingTime') || totalTestTime;
+        const timer = new easytimer.Timer();
+
         document.addEventListener("DOMContentLoaded", function() {
             createAnswerSheet(document.getElementById('module1'), 1, 33);
             createAnswerSheet(document.getElementById('module2'), 2, 33);
             createAnswerSheet(document.getElementById('module3'), 3, 27, true);
             createAnswerSheet(document.getElementById('module4'), 4, 27, true);
-            startTimer();
+            startTimer(savedTime);
 
             // Initialize Hammer.js for swipe gestures
             const pdfContainer = document.getElementById('pdf-container');
@@ -170,8 +177,6 @@
         ];
 
         let submitFlag = false; // Flag to prevent multiple submissions
-        let timerInterval;
-        let time = 2 * 60 * 60; // 2 hours in seconds
 
         // Toggle module visibility
         function toggleModule(moduleId) {
@@ -185,21 +190,22 @@
 
         // Answer sheet generation
         const createAnswerSheet = (module, moduleId, numQuestions, isMath = false) => {
+            const savedAnswers = JSON.parse(localStorage.getItem('savedAnswers')) || {};
             for (let i = 1; i <= numQuestions; i++) {
                 const questionDiv = document.createElement('div');
                 questionDiv.classList.add('question');
                 if (isMath) {
                     questionDiv.innerHTML = `
                         <label>Q${i}</label>
-                        <input type="text" name="q${moduleId}_${i}" onclick="stopPropagation(event)">
+                        <input type="text" name="q${moduleId}_${i}" value="${savedAnswers[`q${moduleId}_${i}`] || ''}" onclick="stopPropagation(event)" onchange="saveAnswer('${moduleId}', ${i}, this.value)">
                     `;
                 } else {
                     questionDiv.innerHTML = `
                         <label>Q${i}</label>
-                        <label>A <input type="radio" name="q${moduleId}_${i}" value="A" onclick="stopPropagation(event)"></label>
-                        <label>B <input type="radio" name="q${moduleId}_${i}" value="B" onclick="stopPropagation(event)"></label>
-                        <label>C <input type="radio" name="q${moduleId}_${i}" value="C" onclick="stopPropagation(event)"></label>
-                        <label>D <input type="radio" name="q${moduleId}_${i}" value="D" onclick="stopPropagation(event)"></label>
+                        <label>A <input type="radio" name="q${moduleId}_${i}" value="A" ${savedAnswers[`q${moduleId}_${i}`] === 'A' ? 'checked' : ''} onclick="stopPropagation(event)" onchange="saveAnswer('${moduleId}', ${i}, 'A')"></label>
+                        <label>B <input type="radio" name="q${moduleId}_${i}" value="B" ${savedAnswers[`q${moduleId}_${i}`] === 'B' ? 'checked' : ''} onclick="stopPropagation(event)" onchange="saveAnswer('${moduleId}', ${i}, 'B')"></label>
+                        <label>C <input type="radio" name="q${moduleId}_${i}" value="C" ${savedAnswers[`q${moduleId}_${i}`] === 'C' ? 'checked' : ''} onclick="stopPropagation(event)" onchange="saveAnswer('${moduleId}', ${i}, 'C')"></label>
+                        <label>D <input type="radio" name="q${moduleId}_${i}" value="D" ${savedAnswers[`q${moduleId}_${i}`] === 'D' ? 'checked' : ''} onclick="stopPropagation(event)" onchange="saveAnswer('${moduleId}', ${i}, 'D')"></label>
                     `;
                 }
                 module.appendChild(questionDiv);
@@ -211,12 +217,18 @@
             event.stopPropagation();
         }
 
+        // Save answers to local storage
+        function saveAnswer(moduleId, questionNumber, answer) {
+            const savedAnswers = JSON.parse(localStorage.getItem('savedAnswers')) || {};
+            savedAnswers[`q${moduleId}_${questionNumber}`] = answer;
+            localStorage.setItem('savedAnswers', JSON.stringify(savedAnswers));
+        }
+
         // Convert raw score to scaled score
-        function convertRawToScaled(rawScore, section) {
-            const conversionTable = rawToScaled;
-            for (let i = 0; i < conversionTable.length; i++) {
-                if (conversionTable[i][0] === rawScore) {
-                    return [conversionTable[i][1], conversionTable[i][2]];
+        function convertRawToScaled(rawScore) {
+            for (let i = 0; i < rawToScaled.length; i++) {
+                if (rawToScaled[i][0] === rawScore) {
+                    return [rawToScaled[i][1], rawToScaled[i][2]];
                 }
             }
             return [200, 200]; // Default value if not found
@@ -226,7 +238,7 @@
         function submitAnswers(timeUp = false) {
             if (submitFlag) return; // Prevent multiple submissions
             submitFlag = true;
-            clearInterval(timerInterval); // Stop the timer
+            timer.stop(); // Stop the timer
 
             const answers = {};
             let totalCorrect = 0;
@@ -260,8 +272,8 @@
             }
 
             // Convert raw scores to scaled scores
-            const readingWritingScoreRange = convertRawToScaled(sectionRawScores.readingWriting, 'readingWriting');
-            const mathScoreRange = convertRawToScaled(sectionRawScores.math, 'math');
+            const readingWritingScoreRange = convertRawToScaled(sectionRawScores.readingWriting);
+            const mathScoreRange = convertRawToScaled(sectionRawScores.math);
 
             sectionScores.readingWriting = {
                 lower: readingWritingScoreRange[0],
@@ -310,12 +322,9 @@
             document.getElementById("result").innerHTML = resultHtml;
             document.getElementById("screenshotButton").style.display = "block"; // Show the screenshot button
 
-            // Construct the pre-filled Google Form URL
-            const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSd_qHbLrvf_CR33t6g9KH7COKpw4cWnnwI27qLu3tsclz1iEg/viewform?usp=sf_link";
-            const preFilledUrl = `${formUrl}?usp=pp_url&entry.1988101988=${encodeURIComponent(currentUser.fullName)}&entry.1743518199=${encodeURIComponent(currentUser.email)}&entry.417744343=${encodeURIComponent(sectionScores.readingWriting.lower)}&entry.1475309389=${encodeURIComponent(sectionScores.math.lower)}&entry.1545704560=${encodeURIComponent(totalScoreRange.lower)}&entry.1988101988=${encodeURIComponent(sectionScores.readingWriting.upper)}&entry.1743518199=${encodeURIComponent(sectionScores.math.upper)}&entry.417744343=${encodeURIComponent(totalScoreRange.upper)}`;
-
-            // Open the pre-filled Google Form URL in a new window
-            window.open(preFilledUrl, '_blank').focus();
+            // Clear saved answers after submission
+            localStorage.removeItem('savedAnswers');
+            localStorage.removeItem('remainingTime'); // Clear remaining time after submission
         }
 
         // Take a screenshot
@@ -346,30 +355,20 @@
 
         // Manual submission
         function manualSubmit() {
-            clearInterval(timerInterval); // Stop the timer
             submitAnswers(false); // Time up flag is false
         }
 
         // Timer function
-        function startTimer() {
-            timerInterval = setInterval(function() {
-                time--; // Decrement time by one second
-
-                const hours = Math.floor(time / 3600);
-                const minutes = Math.floor((time % 3600) / 60);
-                const seconds = time % 60;
-
-                // Ensure two-digit format for minutes and seconds
-                const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-                const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
-
-                document.getElementById('timer').innerText = `Time Remaining: ${hours}:${formattedMinutes}:${formattedSeconds}`;
-
-                if (time <= 0) {
-                    clearInterval(timerInterval);
-                    submitAnswers(true); // Time up flag is true
-                }
-            }, 1000); // Set interval to 1000ms (1 second)
+        function startTimer(duration) {
+            timer.start({countdown: true, startValues: {seconds: duration}});
+            timer.addEventListener('secondsUpdated', function(e) {
+                const {hours, minutes, seconds} = timer.getTimeValues();
+                document.getElementById('timer').innerText = `Time Remaining: ${hours}:${minutes}:${seconds}`;
+                localStorage.setItem('remainingTime', timer.getTotalTimeValues().seconds); // Save remaining time
+            });
+            timer.addEventListener('targetAchieved', function(e) {
+                submitAnswers(true); // Time up flag is true
+            });
         }
 
         // Handle page reload
@@ -383,7 +382,7 @@
             createAnswerSheet(document.getElementById('module2'), 2, 33);
             createAnswerSheet(document.getElementById('module3'), 3, 27, true);
             createAnswerSheet(document.getElementById('module4'), 4, 27, true);
-            startTimer();
+            startTimer(savedTime);
         });
     </script>
 </body>
