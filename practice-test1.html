@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Practice Test 1</title>
-    <link rel="icon" type="image/svg+xml" href="logo.svg">
-
+    <link rel="icon" type="image/jpeg" href="logo.png">
     <style>
         body {
             margin: 0;
@@ -50,7 +49,7 @@
         .question label {
             margin-right: 10px;
         }
-        .submit-button {
+        .submit-button, .screenshot-button {
             padding: 10px;
             font-size: 16px;
             color: white;
@@ -58,9 +57,16 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            margin-top: 10px;
         }
         .submit-button:hover {
             background-color: #0056b3;
+        }
+        .screenshot-button {
+            background-color: #28a745;
+        }
+        .screenshot-button:hover {
+            background-color: #218838;
         }
         #result {
             margin-top: 20px;
@@ -76,6 +82,8 @@
             text-align: center;
         }
     </style>
+    <!-- Include html2canvas library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <div id="pdf-container">
@@ -100,6 +108,7 @@
             <div id="module4" class="module-content"></div>
         </div>
         <button class="submit-button" onclick="manualSubmit()">Submit</button>
+        <button class="screenshot-button" id="screenshotButton" style="display:none;" onclick="takeScreenshot()">Take a Screenshot</button>
         <div id="result"></div>
     </div>
 
@@ -108,7 +117,7 @@
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         if (!currentUser) {
             alert('Session expired. Please start from the login page.');
-            window.location.href = 'Testtaker.html';
+            window.location.href = 'login.html';
         }
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -262,7 +271,25 @@
             }
 
             document.getElementById("result").innerHTML = resultHtml;
-            document.querySelector(".submit-button").disabled = true;
+            document.getElementById("screenshotButton").style.display = "block"; // Show the screenshot button
+
+            // Construct the pre-filled Google Form URL
+            const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSd_qHbLrvf_CR33t6g9KH7COKpw4cWnnwI27qLu3tsclz1iEg/viewform?usp=sf_link";
+            const preFilledUrl = `${formUrl}?usp=pp_url&entry.1988101988=${encodeURIComponent(currentUser.fullName)}&entry.1743518199=${encodeURIComponent(currentUser.email)}&entry.417744343=${encodeURIComponent(sectionScores.readingWriting)}&entry.1475309389=${encodeURIComponent(sectionScores.math)}&entry.1545704560=${encodeURIComponent(totalScore)}`;
+
+            // Open the pre-filled Google Form URL in a new window
+            window.open(preFilledUrl, '_blank').focus();
+        }
+
+        // Take a screenshot
+        function takeScreenshot() {
+            html2canvas(document.querySelector("#result")).then(function(canvas) {
+                // Save the screenshot as an image
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'screenshot.png';
+                link.click();
+            });
         }
 
         // Manual submission
