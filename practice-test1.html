@@ -75,6 +75,12 @@
             padding: 10px;
             border-radius: 5px;
         }
+        #result-summary {
+            padding: 10px;
+            background: #fff;
+            color: black;
+            border-radius: 5px;
+        }
         #timer {
             font-size: 20px;
             font-weight: bold;
@@ -84,10 +90,12 @@
     </style>
     <!-- Include html2canvas library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Include swipe library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 </head>
 <body>
     <div id="pdf-container">
-        <embed src="sat-practice-test-1-digital.pdf" type="application/pdf" width="100%" height="100%">
+        <embed id="pdf-embed" src="sat-practice-test-1-digital.pdf" type="application/pdf" width="100%" height="100%">
     </div>
     <div id="answer-sheet">
         <div id="timer"></div>
@@ -109,7 +117,10 @@
         </div>
         <button class="submit-button" onclick="manualSubmit()">Submit</button>
         <button class="screenshot-button" id="screenshotButton" style="display:none;" onclick="takeScreenshot()">Take a Screenshot</button>
-        <div id="result"></div>
+        <div id="result">
+            <div id="result-summary"></div>
+            <div id="detailed-analysis"></div>
+        </div>
     </div>
 
     <script>
@@ -126,6 +137,14 @@
             createAnswerSheet(document.getElementById('module3'), 3, 27, true);
             createAnswerSheet(document.getElementById('module4'), 4, 27, true);
             startTimer();
+
+            // Initialize Hammer.js for swipe gestures
+            const pdfContainer = document.getElementById('pdf-container');
+            const mc = new Hammer(pdfContainer);
+
+            mc.on("swipeleft swiperight", function(ev) {
+                handleSwipe(ev.type);
+            });
         });
 
         // Correct answers for each module
@@ -248,13 +267,17 @@
             const totalScore = sectionScores.readingWriting + sectionScores.math;
 
             // Display results
-            let resultHtml = `<h3>Results</h3>
-                              <p><strong>Reading and Writing:</strong> ${sectionScores.readingWriting} / 800</p>
-                              <p><strong>Math:</strong> ${sectionScores.math} / 800</p>
-                              <p><strong>Total Score:</strong> ${totalScore} / 1600</p>`;
+            let resultHtml = `<div id="result-summary">
+                                <h3>Results</h3>
+                                <p><strong>Name:</strong> ${currentUser.fullName}</p>
+                                <p><strong>Reading and Writing:</strong> ${sectionScores.readingWriting} / 800</p>
+                                <p><strong>Math:</strong> ${sectionScores.math} / 800</p>
+                                <p><strong>Total Score:</strong> ${totalScore} / 1600</p>
+                              </div>
+                              <div id="detailed-analysis">
+                                <h4>Detailed Analysis</h4>`;
 
             // Detailed analysis
-            resultHtml += `<h4>Detailed Analysis for ${currentUser.fullName}</h4>`;
             for (let moduleId of [1, 2, 3, 4]) {
                 resultHtml += `<h5>Module ${moduleId}</h5><ul>`;
                 for (let i = 1; i <= (moduleId <= 2 ? 33 : 27); i++) {
@@ -270,6 +293,8 @@
                 resultHtml += `<p><strong>Note:</strong> Time's up! The test was submitted automatically.</p>`;
             }
 
+            resultHtml += `</div>`;
+
             document.getElementById("result").innerHTML = resultHtml;
             document.getElementById("screenshotButton").style.display = "block"; // Show the screenshot button
 
@@ -283,13 +308,28 @@
 
         // Take a screenshot
         function takeScreenshot() {
-            html2canvas(document.querySelector("#result")).then(function(canvas) {
+            const resultSummary = document.querySelector("#result-summary");
+            html2canvas(resultSummary).then(function(canvas) {
                 // Save the screenshot as an image
                 const link = document.createElement('a');
                 link.href = canvas.toDataURL('image/png');
-                link.download = 'CKODON-SAT-TEST-1-Result.png';
+                link.download = 'screenshot.png';
                 link.click();
             });
+        }
+
+        // Handle swipe for PDF
+        function handleSwipe(direction) {
+            const pdfEmbed = document.getElementById('pdf-embed');
+            let currentPage = parseInt(pdfEmbed.dataset.page || '1');
+            if (direction === 'swipeleft') {
+                currentPage++;
+            } else if (direction === 'swiperight') {
+                currentPage--;
+            }
+            if (currentPage < 1) currentPage = 1;
+            pdfEmbed.dataset.page = currentPage;
+            pdfEmbed.src = `sat-practice-test-1-digital.pdf#page=${currentPage}`;
         }
 
         // Manual submission
