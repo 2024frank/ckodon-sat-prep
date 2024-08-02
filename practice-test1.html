@@ -164,12 +164,14 @@
             [28, 430, 450], [29, 440, 460], [30, 450, 470], [31, 460, 480], [32, 460, 480], [33, 470, 490], [34, 480, 500], 
             [35, 490, 510], [36, 490, 510], [37, 500, 520], [38, 510, 530], [39, 520, 540], [40, 530, 550], [41, 540, 560], 
             [42, 540, 560], [43, 550, 570], [44, 560, 580], [45, 570, 590], [46, 580, 600], [47, 590, 610], [48, 590, 610], 
-            [49, 600, 620], [50, 610, 630], [51, 620, 640], [52, 630, 650], [53, 630, 650], [54, 640, 660]
+            [49, 600, 620], [50, 610, 630], [51, 620, 640], [52, 630, 650], [53, 630, 650], [54, 640, 660], [55, 650, 670],
+            [56, 660, 680], [57, 670, 690], [58, 680, 700], [59, 690, 710], [60, 700, 720], [61, 710, 730], [62, 720, 740], 
+            [63, 730, 750], [64, 750, 770], [65, 770, 790], [66, 790, 800]
         ];
 
         let submitFlag = false; // Flag to prevent multiple submissions
         let timerInterval;
-        let time = 2.5 * 60 * 60; // 2 hours in seconds
+        let time = 2 * 60 * 60; // 2 hours in seconds
 
         // Toggle module visibility
         function toggleModule(moduleId) {
@@ -210,10 +212,11 @@
         }
 
         // Convert raw score to scaled score
-        function convertRawToScaled(rawScore) {
-            for (let i = 0; i < rawToScaled.length; i++) {
-                if (rawToScaled[i][0] === rawScore) {
-                    return rawToScaled[i];
+        function convertRawToScaled(rawScore, section) {
+            const conversionTable = rawToScaled;
+            for (let i = 0; i < conversionTable.length; i++) {
+                if (conversionTable[i][0] === rawScore) {
+                    return [conversionTable[i][1], conversionTable[i][2]];
                 }
             }
             return [200, 200]; // Default value if not found
@@ -257,22 +260,31 @@
             }
 
             // Convert raw scores to scaled scores
-            const readingWritingScore = convertRawToScaled(sectionRawScores.readingWriting);
-            const mathScore = convertRawToScaled(sectionRawScores.math);
+            const readingWritingScoreRange = convertRawToScaled(sectionRawScores.readingWriting, 'readingWriting');
+            const mathScoreRange = convertRawToScaled(sectionRawScores.math, 'math');
 
-            sectionScores.readingWriting = (readingWritingScore[1] + readingWritingScore[2]) / 2;
-            sectionScores.math = (mathScore[1] + mathScore[2]) / 2;
+            sectionScores.readingWriting = {
+                lower: readingWritingScoreRange[0],
+                upper: readingWritingScoreRange[1]
+            };
+            sectionScores.math = {
+                lower: mathScoreRange[0],
+                upper: mathScoreRange[1]
+            };
 
-            // Calculate total score
-            const totalScore = sectionScores.readingWriting + sectionScores.math;
+            // Calculate total score range
+            const totalScoreRange = {
+                lower: sectionScores.readingWriting.lower + sectionScores.math.lower,
+                upper: sectionScores.readingWriting.upper + sectionScores.math.upper
+            };
 
             // Display results
             let resultHtml = `<div id="result-summary">
                                 <h3>Results</h3>
                                 <p><strong>Name:</strong> ${currentUser.fullName}</p>
-                                <p><strong>Reading and Writing:</strong> ${sectionScores.readingWriting} / 800</p>
-                                <p><strong>Math:</strong> ${sectionScores.math} / 800</p>
-                                <p><strong>Total Score:</strong> ${totalScore} / 1600</p>
+                                <p><strong>Reading and Writing:</strong> ${sectionScores.readingWriting.lower} - ${sectionScores.readingWriting.upper} / 800</p>
+                                <p><strong>Math:</strong> ${sectionScores.math.lower} - ${sectionScores.math.upper} / 800</p>
+                                <p><strong>Total Score:</strong> ${totalScoreRange.lower} - ${totalScoreRange.upper} / 1600</p>
                               </div>
                               <div id="detailed-analysis">
                                 <h4>Detailed Analysis</h4>`;
@@ -300,7 +312,7 @@
 
             // Construct the pre-filled Google Form URL
             const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSd_qHbLrvf_CR33t6g9KH7COKpw4cWnnwI27qLu3tsclz1iEg/viewform?usp=sf_link";
-            const preFilledUrl = `${formUrl}?usp=pp_url&entry.1988101988=${encodeURIComponent(currentUser.fullName)}&entry.1743518199=${encodeURIComponent(currentUser.email)}&entry.417744343=${encodeURIComponent(sectionScores.readingWriting)}&entry.1475309389=${encodeURIComponent(sectionScores.math)}&entry.1545704560=${encodeURIComponent(totalScore)}`;
+            const preFilledUrl = `${formUrl}?usp=pp_url&entry.1988101988=${encodeURIComponent(currentUser.fullName)}&entry.1743518199=${encodeURIComponent(currentUser.email)}&entry.417744343=${encodeURIComponent(sectionScores.readingWriting.lower)}&entry.1475309389=${encodeURIComponent(sectionScores.math.lower)}&entry.1545704560=${encodeURIComponent(totalScoreRange.lower)}&entry.1988101988=${encodeURIComponent(sectionScores.readingWriting.upper)}&entry.1743518199=${encodeURIComponent(sectionScores.math.upper)}&entry.417744343=${encodeURIComponent(totalScoreRange.upper)}`;
 
             // Open the pre-filled Google Form URL in a new window
             window.open(preFilledUrl, '_blank').focus();
@@ -341,17 +353,23 @@
         // Timer function
         function startTimer() {
             timerInterval = setInterval(function() {
+                time--; // Decrement time by one second
+
                 const hours = Math.floor(time / 3600);
                 const minutes = Math.floor((time % 3600) / 60);
                 const seconds = time % 60;
-                document.getElementById('timer').innerText = `Time Remaining: ${hours}:${minutes}:${seconds}`;
+
+                // Ensure two-digit format for minutes and seconds
+                const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+                const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
+
+                document.getElementById('timer').innerText = `Time Remaining: ${hours}:${formattedMinutes}:${formattedSeconds}`;
+
                 if (time <= 0) {
                     clearInterval(timerInterval);
                     submitAnswers(true); // Time up flag is true
-                } else {
-                    time--;
                 }
-            }, 1000);
+            }, 1000); // Set interval to 1000ms (1 second)
         }
 
         // Handle page reload
